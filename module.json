@@ -1,0 +1,147 @@
+{
+  "id": "pindarian-pyramids",
+  "title": "Pindarian Pyramids",
+  "description": "<p>The Nine Pyramids of Pindar, the Ninefold Prohibition, nine sentient demon relics, six living mimic weapons, and the Fivefold Scale for an epic fantasy campaign.</p>",
+  "version": "2.3.1",
+  "authors": [
+    {
+      "name": "Ben \"Asmo\" Vale",
+      "url": "https://www.patreon.com/pactsandpolyhedrals"
+    }
+  ],
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14",
+    "maximum": "14"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "5.3.3",
+          "verified": "5.3.3"
+        }
+      }
+    ]
+  },
+  "packs": [
+    {
+      "name": "lore",
+      "label": "Pindarian Pyramids - Lore & Adventures",
+      "path": "packs/lore",
+      "type": "JournalEntry",
+      "system": "dnd5e",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
+    },
+    {
+      "name": "relics",
+      "label": "Pindarian Pyramids - Magic Items",
+      "path": "packs/relics",
+      "type": "Item",
+      "system": "dnd5e",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
+    },
+    {
+      "name": "guardians",
+      "label": "Pindarian Pyramids - Saharim Guardians",
+      "path": "packs/guardians",
+      "type": "Actor",
+      "system": "dnd5e",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
+    },
+    {
+      "name": "scenes",
+      "label": "Pindarian Pyramids - Maps & Illustrated Scenes",
+      "path": "packs/scenes",
+      "type": "Scene",
+      "system": "dnd5e",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
+    },
+    {
+      "name": "legions",
+      "label": "Pindarian Pyramids - Pindarian Armed Forces",
+      "path": "packs/legions",
+      "type": "Actor",
+      "system": "dnd5e",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
+    },
+    {
+      "name": "bestiary",
+      "label": "Pindarian Pyramids - Bestiary & Boss Roster",
+      "path": "packs/bestiary",
+      "type": "Actor",
+      "system": "dnd5e",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
+    },
+    {
+      "name": "spells",
+      "label": "Pindarian Pyramids - The Pindarian Arcana",
+      "path": "packs/spells",
+      "type": "Item",
+      "system": "dnd5e",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "Pindarian Pyramids",
+      "sorting": "m",
+      "color": "#b78b3e",
+      "packs": [
+        "lore",
+        "relics",
+        "guardians",
+        "bestiary",
+        "scenes",
+        "legions",
+        "spells"
+      ]
+    }
+  ],
+  "styles": [
+    "styles/pindarian-pyramids.css"
+  ],
+  "media": [
+    {
+      "type": "setup",
+      "url": "modules/pindarian-pyramids/assets/art/branding/module-cover.webp",
+      "thumbnail": "modules/pindarian-pyramids/assets/art/branding/module-cover.webp"
+    }
+  ],
+  "url": "https://github.com/macv0223/pindarian-pyramids",
+  "manifest": "https://github.com/macv0223/pindarian-pyramids/releases/latest/download/module.json",
+  "download": "https://github.com/macv0223/pindarian-pyramids/releases/download/v2.3.1/pindarian-pyramids.zip",
+  "license": "LICENSE.md",
+  "readme": "https://github.com/macv0223/pindarian-pyramids/blob/main/README.md",
+  "flags": {}
+}

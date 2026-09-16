@@ -1,0 +1,34 @@
+.pindarian-pyramids {
+  line-height: 1.45;
+}
+
+.pindarian-pyramids blockquote {
+  border-left: 3px solid #b78b3e;
+  margin: 0.75rem 0;
+  padding: 0.35rem 0.8rem;
+}
+
+.pindarian-pyramids h1,
+.pindarian-pyramids h2,
+.pindarian-pyramids h3 {
+  color: #6f351f;
+}
+
+.pindarian-pyramids .pindarian-splash {
+  margin: 0 0 1rem;
+}
+
+.pindarian-pyramids .pindarian-splash img {
+  aspect-ratio: 3 / 2;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.pindarian-pyramids .pindarian-splash figcaption {
+  background: #211713;
+  color: #f3dfb5;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+  text-align: center;
+}
