@@ -103,7 +103,7 @@ def module_asset(path: str) -> Path:
 def main() -> None:
     manifest = json.loads((MODULE / "module.json").read_text(encoding="utf-8"))
     assert manifest["id"] == "pindarian-pyramids"
-    assert manifest["version"] == "2.3.1"
+    assert manifest["version"] == "2.5.0"
     assert manifest["compatibility"] == {"minimum": "14", "verified": "14", "maximum": "14"}
     system_compatibility = manifest["relationships"]["systems"][0]["compatibility"]
     assert system_compatibility == {"minimum": "5.3.3", "verified": "5.3.3"}
@@ -113,7 +113,8 @@ def main() -> None:
     lore = decode_pack("lore")
     item_rows = decode_pack("relics")
     actor_rows = decode_pack("guardians")
-    scenes = decode_pack("scenes")
+    scene_rows = decode_pack("scenes")
+    scenes = [row for row in scene_rows if row[0].startswith("!scenes!")]
 
     journal_parents = [(key, value) for key, value in lore if key.startswith("!journal!")]
     journal_pages = [(key, value) for key, value in lore if key.startswith("!journal.pages!")]
@@ -127,7 +128,7 @@ def main() -> None:
     assert len(item_effects) == 7
     assert len(actors) == 9
     assert len(actor_items) == 145
-    assert len(scenes) == 11
+    assert len(scenes) == 37
 
     for key, page in journal_pages:
         assert page["_id"] in key
@@ -168,14 +169,27 @@ def main() -> None:
         if activity["uses"]["max"]:
             assert any(target["type"] == "activityUses" for target in activity["consumption"]["targets"])
 
+    scene_levels = [row for row in scene_rows if row[0].startswith("!scenes.levels!")]
+    levels_by_id = {level["_id"]: level for _key, level in scene_levels}
     for key, scene in scenes:
         assert key.startswith("!scenes!") and scene["_id"] in key
-        assert module_asset(scene["background"]["src"]).is_file()
         assert scene["width"] > 0 and scene["height"] > 0
+        # V14 reads scene artwork from an embedded Level; Scene#background is
+        # deprecated there and silently dropped.
+        assert scene["levels"], f"{scene['name']} has no Level"
+        assert scene["initialLevel"] in scene["levels"], f"{scene['name']} initialLevel is not one of its levels"
+        for level_id in scene["levels"]:
+            level = levels_by_id[level_id]
+            assert module_asset(level["background"]["src"]).is_file()
+            # anchor 0 pins the image's top-left corner to the canvas centre
+            assert level["textures"]["anchorX"] == 0.5 and level["textures"]["anchorY"] == 0.5, (
+                f"{scene['name']} level texture anchor is not centred"
+            )
+
 
     # Every image path referenced by any document must resolve to a real file.
     missing = set()
-    for rows in (lore, item_rows, actor_rows, scenes):
+    for rows in (lore, item_rows, actor_rows, scene_rows):
         for _key, doc in rows:
             for path in re.findall(r'modules/pindarian-pyramids/assets/[^"\'<>)\\\\ ]+', json.dumps(doc)):
                 if not module_asset(path).is_file():
@@ -185,13 +199,13 @@ def main() -> None:
     generated = list((MODULE / "assets/art").rglob("*.webp"))
     maps = list((MODULE / "assets/maps").glob("*.jpg"))
     assert len(generated) == 286
-    assert len(maps) == 2
+    assert len(maps) >= 2
 
     print("Pindarian Pyramids validation passed")
     print(f"  Journals: {len(journal_parents)} ({len(journal_pages)} populated pages)")
     print(f"  Actors: {len(actors)} ({len(actor_items)} embedded actions/features)")
     print(f"  Items: {len(items)}")
-    print(f"  Scenes: {len(scenes)}")
+    print(f"  Scenes: {len(scenes)} ({len(scene_levels)} levels)")
     print(f"  Item effects: {len(item_effects)}")
     print(f"  Generated art: {len(generated)}")
     print(f"  Supplied maps: {len(maps)}")

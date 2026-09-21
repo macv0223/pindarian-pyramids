@@ -1,0 +1,75 @@
+name: Release
+
+# Push a tag and the release builds and publishes itself:
+#
+#     git tag v2.4.2 && git push origin v2.4.2
+#
+# The workflow rebuilds the module from source, runs the validator, and attaches
+# pindarian-pyramids.zip and module.json to a release marked Latest. Both asset
+# names must match the manifest's download and manifest URLs exactly, which
+# manage.py package guarantees.
+#
+# It can also be run by hand from the Actions tab, which is useful for
+# re-running a failed publish without moving the tag.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build and publish, e.g. v2.4.2"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r project/requirements.txt
+          # The journal pipeline converts Markdown with pandoc.
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends pandoc
+
+      - name: Build, validate and package
+        working-directory: project
+        run: python manage.py package
+
+      - name: Check the tag matches the manifest version
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="v$(python -c 'import json;print(json.load(open("dist/module.json"))["version"])')"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Tag $TAG does not match manifest version $VERSION."
+            echo "Bump with: python project/manage.py release ${VERSION#v}"
+            exit 1
+          fi
+          echo "Publishing $VERSION"
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: Pindarian Pyramids ${{ github.event.inputs.tag || github.ref_name }}
+          body_path: build/pindarian-pyramids/CHANGELOG.md
+          make_latest: true
+          files: |
+            dist/pindarian-pyramids.zip
+            dist/module.json

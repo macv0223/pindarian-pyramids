@@ -23,7 +23,7 @@ TEMPLATE_PACK = ROOT / "pack-template"
 OUTPUT = ROOT.parent / "build/pindarian-pyramids"
 
 REPOSITORY = "https://github.com/macv0223/pindarian-pyramids"
-VERSION = "2.3.1"
+VERSION = "2.5.0"
 MODULE_ID = "pindarian-pyramids"
 
 SOURCES = {
@@ -810,10 +810,21 @@ def journal_page_image(name: str, title: str, index: int) -> str:
     return f"modules/{MODULE_ID}/assets/art/branding/module-cover.webp"
 
 
+# (journal name, page title) -> (journal id, page id), filled in as journals build.
+JOURNAL_PAGES: dict[tuple[str, str], tuple[str, str]] = {}
+
+
+def scene_journal(journal_name: str, page_title: str) -> tuple[str, str] | None:
+    """The (journal, page) a scene should open, if that page exists."""
+    return JOURNAL_PAGES.get((journal_name, page_title))
+
+
 def journal_records(name: str, markdown: str) -> list[tuple[bytes, bytes]]:
     journal_id = foundry_id(f"journal:{name}")
     sections = journal_sections(name, trim_preface(markdown, name))
     page_ids = [foundry_id(f"page:{name}:{title}:{i}") for i, (title, _) in enumerate(sections)]
+    for (title, _body), page_id in zip(sections, page_ids):
+        JOURNAL_PAGES[(name, title)] = (journal_id, page_id)
     journal = {
         "_id": journal_id,
         "name": name,
@@ -1339,6 +1350,17 @@ def actor_spell_record(actor_id: str, unit: dict, icon: str, spell: tuple, sort:
     actor_name = unit["name"]
     name, level, school, components, spell_range, body = spell[:6]
     spec = spell[6] if len(spell) > 6 else None
+
+    # If this is one of the module's own spells, the sheet uses the compendium's
+    # rules text verbatim and demotes the supplied text to a caster lore note.
+    caster_note = None
+    tradition = people = None
+    if name in ARCANA_BY_NAME:
+        tradition, people, canonical = ARCANA_BY_NAME[name]
+        caster_note = body.strip() or None
+        _n, level, school, components, _dur, spell_range, body = canonical[:7]
+        if spec is None and len(canonical) > 7:
+            spec = canonical[7]
     item_id = foundry_id(f"actor-spell:{actor_name}:{sort}:{name}")
     range_value, range_units = spell_range
     activities: dict = {}
@@ -1346,7 +1368,7 @@ def actor_spell_record(actor_id: str, unit: dict, icon: str, spell: tuple, sort:
         feature = dict(spec)
         feature["name"] = name
         feature["description"] = body
-        feature.setdefault("activation", "action")
+        feature["activation"] = casting_time(body, feature.get("activation", "action"))[0]
         feature.setdefault("range", range_value or 0)
         if feature.get("kind") == "save":
             feature.setdefault("dc", unit.get("spell_dc", 15))
@@ -1366,10 +1388,22 @@ def actor_spell_record(actor_id: str, unit: dict, icon: str, spell: tuple, sort:
         "ownership": {"default": 0},
         "flags": {"pindarian-pyramids": {"section": "spell"}},
         "system": {
-            "description": {"value": f'<div class="pindarian-pyramids">{markdown_to_html(body)}</div>', "chat": ""},
+            "description": {
+                "value": (
+                    '<div class="pindarian-pyramids">'
+                    + spell_body_html(body, tradition, people)
+                    + (caster_note_html(actor_name, caster_note) if caster_note else "")
+                    + "</div>"
+                ),
+                "chat": "",
+            },
             "identifier": identifier(name),
             "source": {"book": "Pindarian Pyramids", "page": "", "custom": "Pacts & Polyhedrals", "license": "", "revision": 1, "rules": "2024"},
-            "activation": {"type": "action", "condition": "", "value": None},
+            "activation": {
+                "type": casting_time(body, "action")[0],
+                "condition": "",
+                "value": casting_time(body, "action")[1],
+            },
             "duration": {"value": "", "units": "inst"},
             "range": {"value": range_value or None, "units": range_units, "special": ""},
             "target": {"affects": {"count": "", "type": "", "choice": False, "special": ""}, "template": {"count": "", "contiguous": False, "type": "", "size": "", "units": "ft"}},
@@ -1449,6 +1483,57 @@ def statblock_feature_record(actor_id: str, actor_name: str, icon: str, section:
     return f"!actors.items!{actor_id}.{item_id}".encode(), json.dumps(item, separators=(",", ":")).encode()
 
 
+
+# ---------------------------------------------------------------------------
+# Spell text is authored once, in SPELL_TRADITIONS, and reused everywhere.
+#
+# An NPC's prepared spell renders the *same* description as the compendium
+# entry. Anything specific to that caster is rendered separately, below the
+# rules, as a named lore note — so the rules text stays generic and usable by
+# any spellcaster.
+# ---------------------------------------------------------------------------
+
+ARCANA_BY_NAME: dict[str, tuple] = {}
+for _tradition, _people, _spells in SPELL_TRADITIONS:
+    for _spell in _spells:
+        ARCANA_BY_NAME[_spell[0]] = (_tradition, _people, _spell)
+
+
+def spell_body_html(body: str, tradition: str | None = None, people: str | None = None) -> str:
+    """Rules text, with the tradition line above it."""
+    head = ""
+    if tradition and people:
+        head = f'<p><em>{html.escape(tradition)} - magic of the {html.escape(people)}.</em></p>'
+    return head + markdown_to_html(body)
+
+
+def caster_note_html(caster: str, note: str) -> str:
+    """A lore note about one caster, clearly separated from the rules."""
+    who = caster.split(",")[0].split(" - ")[0]
+    return (
+        '<hr />'
+        f'<p><strong>{html.escape(who)} and this spell.</strong></p>'
+        + markdown_to_html(note)
+    )
+
+
+
+CASTING_TIME_PATTERNS = (
+    (r"Cast as a reaction", ("reaction", None)),
+    (r"\*Cast as a bonus action", ("bonus", None)),
+    (r"Casting time 10 minutes", ("minute", 10)),
+    (r"Casting time 1 minute", ("minute", 1)),
+)
+
+
+def casting_time(body: str, declared: str) -> tuple[str, int | None]:
+    """A spell's chip must agree with its own rules text."""
+    for pattern, result in CASTING_TIME_PATTERNS:
+        if re.search(pattern, body):
+            return result
+    return declared, None
+
+
 def spell_item_record(tradition: str, people: str, spell: tuple, sort: int) -> tuple[bytes, bytes]:
     name, level, school, components, duration, spell_range, body, spec = spell
     spell_id = foundry_id(f"spell:{name}")
@@ -1457,7 +1542,11 @@ def spell_item_record(tradition: str, people: str, spell: tuple, sort: int) -> t
     feature["name"] = name
     feature["description"] = body
     feature.setdefault("activation", "action")
+    cast_type, cast_value = casting_time(body, feature["activation"])
+    feature["activation"] = cast_type
     activity = activity_from_feature(name, spell_id, feature, 0)
+    if cast_value:
+        activity["activation"]["value"] = cast_value
     activity["consumption"]["spellSlot"] = True
     if feature.get("kind") in {"save", "attack"}:
         if "save" in activity:
@@ -1484,7 +1573,7 @@ def spell_item_record(tradition: str, people: str, spell: tuple, sort: int) -> t
             "description": {"value": description, "chat": ""},
             "identifier": identifier(name),
             "source": {"book": "Pindarian Pyramids", "page": tradition, "custom": "Pacts & Polyhedrals", "license": "", "revision": 1, "rules": "2024"},
-            "activation": {"type": feature["activation"], "condition": "", "value": None},
+            "activation": {"type": cast_type, "condition": "", "value": cast_value},
             "duration": {"value": duration_value, "units": duration_units},
             "range": {"value": range_value or None, "units": range_units, "special": ""},
             "target": {"affects": {"count": "", "type": "", "choice": False, "special": ""}, "template": {"count": "", "contiguous": False, "type": "", "size": "", "units": "ft"}},
@@ -1504,6 +1593,90 @@ def spell_item_record(tradition: str, people: str, spell: tuple, sort: int) -> t
     return f"!items!{spell_id}".encode(), json.dumps(item, separators=(",", ":")).encode()
 
 
+
+# ---------------------------------------------------------------------------
+# Vhal'Kathar battlemaps and site illustrations, supplied as finished art and
+# shipped as scenes. Keys match the keyed areas in the Vhal'Kathar site guide.
+#
+# (filename, scene title, gridded, journal page title)
+# ---------------------------------------------------------------------------
+
+VHALKATHAR_MAPS = [
+    ("w1-upon-the-battlements.jpg", "W1. Upon the Battlements", True, "W1. Upon the Battlements"),
+    ("w2-the-run-to-the-citadel.png", "W2. The Run to the Citadel", True, "W2. The Run to the Citadel"),
+    ("w3-the-council-of-horns-approach.png", "W3. The Council of Horns - Approach", True, "W3. The Council of Horns"),
+    ("w3-the-council-of-horns-chamber.webp", "W3. The Council of Horns - Chamber", True, "W3. The Council of Horns"),
+    ("n1-tariel-s-basement.webp", "N1. Tariel's Basement", True, "N1. Tariel's Basement"),
+    ("n2-the-chamber-of-ten.webp", "N2. The Chamber of Ten", True, "N2. The Chamber of Ten"),
+    ("n3-the-friendly-statue.webp", "N3. The Friendly Statue", True, "N3. The Friendly Statue"),
+    ("n4-the-basilisk-s-larder.webp", "N4. The Basilisk's Larder", True, "N4. The Basilisk's Larder"),
+    ("n5-the-black-knight.webp", "N5. The Black Knight", True, "N5. The Black Knight"),
+    ("n6-the-subterranean-garden.webp", "N6. The Subterranean Garden", True, "N6. The Subterranean Garden"),
+    ("n7-the-blood-bank.webp", "N7. The Blood Bank", True, "N7. The Blood Bank"),
+    ("n8-the-temple-of-the-devouring-queen.webp", "N8. The Temple of the Devouring Queen", True, "N8. The Temple of the Devouring Queen"),
+    ("n9-the-rectory-n10-the-acolytes-quarters.webp", "N9. The Rectory & N10. The Acolytes' Quarters", True, "N9. The Rectory"),
+    ("n11-the-larder.webp", "N11. The Larder", True, "N11. The Larder"),
+    ("n12-the-kitchen.webp", "N12. The Kitchen", True, "N12. The Kitchen"),
+    ("n13-the-feasting-hall.webp", "N13. The Feasting Hall", True, "N13. The Feasting Hall of the Yuan-ti"),
+    ("n14-living-quarters-a.webp", "N14. Living Quarters A", True, "N14. Living Quarters A"),
+    ("n15-living-quarters-b.webp", "N15. Living Quarters B", True, "N15. Living Quarters B"),
+    ("n16-the-incubation-lab.webp", "N16. The Incubation Lab", True, "N16. The Incubation Lab"),
+    ("n17-the-sacrificial-chamber.webp", "N17. The Sacrificial Chamber", True, "N17. The Sacrificial Chamber"),
+    ("n18-the-throne-of-the-devouring-queen.webp", "N18. The Throne of the Devouring Queen", True, "N18. The Throne of the Devouring Queen"),
+    ("n19-the-queen-s-hoard.webp", "N19. The Queen's Hoard", True, "N19. The Queen's Hoard"),
+    ("v1-the-descent-of-names.jpg", "V1. The Descent of Names", True, "V1. The Descent of Names"),
+    ("v2-the-procession.jpg", "V2. The Procession", True, "V2. The Procession"),
+    ("wahyrst-and-the-buried-pyramid.png", "Wahyrst and the Buried Pyramid", False, "Running Vhal'Kathar"),
+    ("astra-approach.png", "Astra - Approach", False, "Running Astra"),
+]
+
+
+
+def level_record(scene_id: str, scene_name: str, image_path: str) -> tuple[bytes, bytes]:
+    """The scene's ground Level.
+
+    Foundry V14 moved scene artwork onto embedded Level documents; `Scene#background`
+    is deprecated there and silently dropped.
+
+    The placement fields live on `textures`, not on `background`. `background` holds
+    only colour, source, tint and alpha threshold. **anchorX/anchorY are 0.5**: the
+    anchor is the point of the image pinned to the canvas origin, so an anchor of 0
+    puts the image's top-left corner at the canvas centre and pushes the map into
+    the bottom-right quadrant.
+    """
+    level_id = foundry_id(f"level:{scene_name}")
+    level = {
+        "_id": level_id,
+        "name": "Level",
+        "sort": 0,
+        "elevation": {"bottom": 0, "top": 20},
+        "background": {
+            "color": "#999999",
+            "src": image_path,
+            "tint": "#ffffff",
+            "alphaThreshold": 0.75,
+        },
+        "foreground": {"src": None, "tint": "#ffffff", "alphaThreshold": 0.75},
+        "fog": {"src": None, "tint": "#ffffff"},
+        "textures": {
+            "anchorX": 0.5,
+            "anchorY": 0.5,
+            "offsetX": 0,
+            "offsetY": 0,
+            "fit": "fill",
+            "scaleX": 1,
+            "scaleY": 1,
+            "rotation": 0,
+        },
+        "visibility": {"levels": []},
+        "flags": {},
+    }
+    return (
+        f"!scenes.levels!{scene_id}.{level_id}".encode(),
+        json.dumps(level, separators=(",", ":")).encode(),
+    )
+
+
 def scene_record(
     name: str,
     image_path: str,
@@ -1514,8 +1687,17 @@ def scene_record(
     grid_size: int = 100,
     navigation: bool = False,
     sort: int = 100000,
-) -> tuple[bytes, bytes]:
+    journal: tuple[str, str] | None = None,
+    darkness: float = 0.0,
+) -> list[tuple[bytes, bytes]]:
+    """A scene and its ground Level.
+
+    `journal` is an optional (journal id, page id) pair; Foundry shows that page
+    as the scene's notes and opens it from the scene's context menu.
+    """
     scene_id = foundry_id(f"scene:{name}")
+    level_id = foundry_id(f"level:{name}")
+    journal_id, page_id = journal or (None, None)
     scene = {
         "_id": scene_id,
         "name": name,
@@ -1523,63 +1705,58 @@ def scene_record(
         "navigation": navigation,
         "navOrder": sort,
         "navName": "",
-        "background": {
-            "src": image_path,
-            "anchorX": 0,
-            "anchorY": 0,
-            "offsetX": 0,
-            "offsetY": 0,
-            "fit": "fill",
-            "scaleX": 1,
-            "scaleY": 1,
-            "rotation": 0,
-            "tint": "#ffffff",
-            "alphaThreshold": 0,
-        },
-        "foreground": None,
-        "foregroundElevation": 4,
         "thumb": image_path,
         "width": width,
         "height": height,
-        "padding": 0,
+        "padding": 0.25,
+        "shiftX": 0,
+        "shiftY": 0,
         "initial": {"x": None, "y": None, "scale": None},
-        "backgroundColor": "#15110f",
+        "initialLevel": level_id,
         "grid": {
             "type": grid_type,
             "size": grid_size,
-            "distance": 5,
-            "units": "ft",
             "style": "solidLines",
             "thickness": 1,
             "color": "#000000",
-            "alpha": 0.22 if grid_type else 0,
+            "alpha": 0.2 if grid_type else 0,
+            "distance": 5,
+            "units": "ft",
         },
         "tokenVision": True,
-        "fog": {
-            "exploration": True,
-            "overlay": None,
-            "colors": {"explored": None, "unexplored": None},
-            "exploredColor": None,
-            "unexploredColor": None,
-        },
+        "fog": {"mode": 1, "colors": {"explored": None, "unexplored": None}},
         "environment": {
-            "globalLight": {"enabled": True, "darkness": {"max": 1, "min": 0}},
-            "darknessLevel": 0,
+            "darknessLevel": darkness,
+            "darknessLock": False,
+            "globalLight": {
+                "enabled": darkness == 0,
+                "alpha": 0.5,
+                "bright": False,
+                "color": None,
+                "coloration": 1,
+                "luminosity": 0,
+                "saturation": 0,
+                "contrast": 0,
+                "shadows": 0,
+                "darkness": {"min": 0, "max": 1},
+            },
+            "cycle": True,
             "base": {"hue": 0, "intensity": 0, "luminosity": 0, "saturation": 0, "shadows": 0},
-            "dark": {"hue": 0, "intensity": 0, "luminosity": 0, "saturation": 0, "shadows": 0},
+            "dark": {"hue": 0.09, "intensity": 0.4, "luminosity": 0, "saturation": 0.1, "shadows": 0},
         },
+        "transition": {"type": None, "duration": 1500, "activeOnly": False},
         "drawings": [],
         "tokens": [],
         "lights": [],
         "notes": [],
         "sounds": [],
-        "templates": [],
         "tiles": [],
         "walls": [],
         "regions": [],
         "playlist": None,
         "playlistSound": None,
-        "journal": None,
+        "journal": journal_id,
+        "journalEntryPage": page_id,
         "weather": "",
         "folder": None,
         "sort": sort,
@@ -1587,7 +1764,10 @@ def scene_record(
         "flags": {"pindarian-pyramids": {"illustrated": True}},
         "_stats": stats(),
     }
-    return f"!scenes!{scene_id}".encode(), json.dumps(scene, separators=(",", ":")).encode()
+    return [
+        (f"!scenes!{scene_id}".encode(), json.dumps(scene, separators=(",", ":")).encode()),
+        level_record(scene_id, name, image_path),
+    ]
 
 
 def varint(value: int) -> bytes:
@@ -1716,6 +1896,7 @@ def build() -> None:
     shutil.copytree(ASSET_ROOT, OUTPUT / "assets/art", dirs_exist_ok=True)
     shutil.copy2(MAP_ROOT / "pyramid-complex.jpg", OUTPUT / "assets/maps/pyramid-complex.jpg")
     shutil.copy2(MAP_ROOT / "pyramid-exterior.jpg", OUTPUT / "assets/maps/pyramid-exterior.jpg")
+    shutil.copytree(MAP_ROOT / "vhalkathar", OUTPUT / "assets/maps/vhalkathar", dirs_exist_ok=True)
 
     manifest = {
         "id": MODULE_ID,
@@ -1775,15 +1956,41 @@ For manual installation, extract `pindarian-pyramids.zip` into
 - **Pindarian Pyramids - Magic Items:** Nine artifact weapons, six rare dormant Mimic
   weapons, and the very rare Fivefold Scale. Every item has multiple configured
   activities; applicable passive properties are supplied as Active Effects.
-- **Pindarian Pyramids - Saharim Guardians:** Ten narrative NPC actors representing
-  the named deathless guardians. The source does not provide combat stat blocks, so
-  these actors carry biographies and neutral baseline statistics for GM adaptation.
-- **Pindarian Pyramids - Maps & Illustrated Scenes:** The two supplied pyramid maps and
-  nine theater-of-the-mind scenes, one for each pyramid.
+- **Pindarian Pyramids - Saharim Guardians:** Full stat blocks for the nine deathless
+  guardians, including legendary, lair and mythic actions and prepared spell lists.
+- **Pindarian Pyramids - Bestiary & Boss Roster:** Every creature the site guides call for.
+- **Pindarian Pyramids - Pindarian Armed Forces:** Nineteen Solaari, Lunari and Veylari units.
+- **Pindarian Pyramids - The Pindarian Arcana:** Sixty original spells, two per level per tradition.
+- **Pindarian Pyramids - Maps & Illustrated Scenes:** Twenty-six Vhal'Kathar battlemaps and
+  illustrations, the two supplied pyramid maps, and nine theater-of-the-mind scenes. Each
+  scene opens its keyed area in the lore journals.
 
-The module includes 36 original grotesque chibi comic-book illustrations: one cover,
-nine locations, ten guardian portraits, and sixteen magic-item images. The two supplied maps
-are preserved under `assets/maps/`, and editable source text remains in `source/`.
+The module includes original artwork throughout: one image per journal page, per spell,
+per relic and per actor. Maps are preserved under `assets/maps/`, and editable source text
+remains in `source/`.
+
+## Building and installing
+
+Everything runs from `project/`:
+
+```
+python manage.py install          # build, validate and install into Foundry
+python manage.py install --data "/path/to/FoundryVTT/Data"
+python manage.py package          # build, validate and write dist/ for a release
+python manage.py release 2.4.2    # bump the version, package, tag and publish
+python manage.py watch            # rebuild and reinstall on every source change
+```
+
+`install` **deletes the installed module directory before copying**. This is deliberate:
+Foundry opens compendium packs read-write and leaves `.ldb`, `LOCK` and `MANIFEST-*` files
+behind, and if those survive an update LevelDB can replay the old manifest and serve stale
+content. It refuses to delete a directory that is not this module.
+
+Set `FOUNDRY_DATA` once to skip `--data`. Requires Python 3.12, Pillow and pandoc.
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`, which rebuilds from source, checks
+the tag against the manifest version, and publishes the release with both assets attached
+and marked Latest.
 
 ## Compatibility
 
@@ -1816,6 +2023,41 @@ where separately licensed by the applicable rights holder.
     write_text(OUTPUT / "LICENSE.md", license_text)
 
     changelog = """# Changelog
+
+## 2.5.0
+
+- **Fixes map placement.** The Level's texture anchor was 0 rather than 0.5, which pins the image's
+  top-left corner to the canvas origin and throws the map into the bottom-right quadrant. Placement
+  also lives on the Level's `textures`, not inside `background`; both are corrected against a real
+  V14 scene export.
+- **Scenes now open their keyed area.** 35 of 37 scenes link to the matching journal page, so the
+  scene's notes button opens N1, V2, or the relevant pyramid chapter.
+- Interior battlemaps ship at darkness 0.7 with global light off, so torches matter.
+- Adds `manage.py`: one command to build, install, package, release or watch. `install` removes the
+  old module directory first, so stale LevelDB files cannot serve old content.
+- Adds a tag-triggered GitHub Actions release workflow.
+
+## 2.4.1
+
+- **Fixes blank scenes on Foundry V14.** V14 moved scene artwork onto embedded Level documents and
+  silently drops the deprecated `Scene#background`, so every scene loaded at the correct dimensions
+  with a correct thumbnail and no visible map. All 37 scenes now ship a ground Level carrying the
+  background; the deprecated field is retained as a harmless fallback.
+- The validator now asserts that each scene has a Level and that the Level's background resolves to
+  a real file.
+
+## 2.4.0
+
+- **NPC sheet spells now render the compendium's rules text verbatim.** Prepared spells on Kathandar,
+  Korveth Anor, Nymara Thess and Irio Venn previously carried abbreviated paraphrases; they now pull
+  the canonical description, and anything specific to that caster appears below a rule as a named
+  lore note ("Kathandar and this spell") rather than inside the rules.
+- Caster lore no longer uses bare pronouns. Every note names the caster.
+- Full 5e rules text written for the five non-Arcana spells on Kathandar's list.
+- **Casting times are derived from the spell's own text**, fixing 14 spells that declared a reaction,
+  a bonus action or a 1/10-minute casting time while shipping an Action chip.
+- Adds 26 Vhal'Kathar battlemaps and site illustrations as labelled scenes (W1-W3, N1-N19, V1-V2),
+  and the in-person promo art to branding.
 
 ## 2.3.1
 
@@ -2071,7 +2313,8 @@ jobs:
         guardian_records.extend(actor_records(name, location, body, icon))
     write_pack(OUTPUT / "packs/guardians", guardian_records)
 
-    scene_records = [
+    scene_records: list[tuple[bytes, bytes]] = []
+    scene_records.extend(
         scene_record(
             "Pindarian Pyramid Exterior Map",
             f"modules/{MODULE_ID}/assets/maps/pyramid-exterior.jpg",
@@ -2079,7 +2322,9 @@ jobs:
             2048,
             navigation=True,
             sort=100000,
-        ),
+        )
+    )
+    scene_records.extend(
         scene_record(
             "Pindarian Pyramid Complex Map",
             f"modules/{MODULE_ID}/assets/maps/pyramid-complex.jpg",
@@ -2089,13 +2334,13 @@ jobs:
             grid_size=60,
             navigation=True,
             sort=200000,
-        ),
-    ]
+        )
+    )
     for index, (title, filename) in enumerate(LOCATION_ART.items(), 3):
         ART_USED.add(f"locations/{filename}")
         with Image.open(ASSET_ROOT / "locations" / filename) as artwork:
             width, height = artwork.size
-        scene_records.append(
+        scene_records.extend(
             scene_record(
                 title,
                 f"modules/{MODULE_ID}/assets/art/locations/{filename}",
@@ -2103,6 +2348,27 @@ jobs:
                 height,
                 navigation=False,
                 sort=index * 100000,
+                journal=scene_journal("The Nine Pyramids of Pindar", title),
+            )
+        )
+    guide = "Vhal'Kathar: Pyramid of the Last Breath - Site Guide"
+    for index, (filename, title, gridded, page) in enumerate(VHALKATHAR_MAPS, 1):
+        with Image.open(MAP_ROOT / "vhalkathar" / filename) as artwork:
+            width, height = artwork.size
+        source_guide = "Astra: Pyramid of the Sun - Site Guide" if page == "Running Astra" else guide
+        scene_records.extend(
+            scene_record(
+                f"Vhal'Kathar - {title}",
+                f"modules/{MODULE_ID}/assets/maps/vhalkathar/{filename}",
+                width,
+                height,
+                grid_type=1 if gridded else 0,
+                grid_size=100,
+                navigation=False,
+                sort=(20 + index) * 100000,
+                journal=scene_journal(source_guide, page),
+                # Interiors and the necropolis are lit by what the party carries.
+                darkness=0.7 if gridded and not title.startswith("W") else 0.0,
             )
         )
     write_pack(OUTPUT / "packs/scenes", scene_records)

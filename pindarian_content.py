@@ -1343,83 +1343,95 @@ KATHANDAR = dict(
           "damage": [(8, 8, "psychic")], "on_save": "half"}),
     ],
     spells=[
-        # (name, level, school, components, range, body)
-        ("Grave Whisper", 0, "nec", "vocal,somatic", (60, "ft"),
-         "Make a ranged spell attack against one creature. On a hit it takes 1d10 necrotic damage, and if it "
-         "is below half its hit point maximum it also hears the name of the last person it watched die.",
-         {"kind": "attack", "attack_type": "ranged", "ability": "int", "damage": [(1, 10, "necrotic")]}),
+        # Pindarian Arcana entries carry only a caster note. The rules text is
+        # pulled from the compendium at build time, so every sheet and every
+        # spell card show exactly the same spell.
         ("Vector Knot", 0, "trs", "somatic", (60, "ft"),
-         "The target makes a Strength saving throw or is moved 5 feet horizontally without provoking "
-         "opportunity attacks. *Void Arcana cantrip.*",
-         {"kind": "save", "save": "str", "on_save": "none"}),
+         "A cantrip Kathandar uses as punctuation rather than as an attack, to move a speaker half a pace "
+         "sideways so that they are standing where he wants them when he answers."),
         ("Null Step", 1, "con", "somatic", (15, "ft"),
-         "As a bonus action, Kathandar appears in a known unoccupied space within 15 feet without travelling "
-         "through the space between. *Void Arcana.*",
-         {"kind": "utility", "activation": "bonus"}),
+         "Four thousand years in one building has made this reflexive. He does not appear to cast it, and "
+         "most visitors never notice he has moved."),
         ("Astral Thread", 2, "div", "vocal,somatic", (30, "ft"),
-         "Links two creatures with an invisible silver cord for 1 hour. *Void Arcana.*",
-         {"kind": "utility", "targets": "2"}),
+         "He ties one to anyone he intends to let leave alive, so that he knows when they cross out of "
+         "Vhal'Kathar and can stop listening for them."),
         ("Planar Mooring", 3, "abj", "vocal,somatic,concentration", (60, "ft"),
-         "A 20-foot-radius zone in which teleportation fails, planes cannot be changed, portals cannot be "
-         "created and possession is suppressed. *Void Arcana.* He opens with this against Vhaskar.",
-         {"kind": "utility", "template": ("radius", 20)}),
-        ("Animate Dead", 3, "nec", "vocal,somatic,material", (10, "ft"),
-         "Kathandar raises a corpse or skeleton as an undead servant. **He does not use this spell.** It is "
-         "prepared, it has been prepared for four thousand years, and he has never once cast it, and the "
-         "party may ask him why."),
+         "His opening move against Vhaskar Corr, every time, for four thousand years. Vhaskar knows it is "
+         "coming and walks into it anyway, which Kathandar finds more insulting than the desertion."),
         ("Event Horizon Cage", 4, "trs", "vocal,somatic,concentration", (90, "ft"),
-         "A 20-foot-radius gravitational distortion that pulls creatures inward, doubles the cost of moving "
-         "away, and imposes disadvantage on ranged attacks through it. *Void Arcana.*",
-         {"kind": "save", "save": "str", "on_save": "none", "template": ("radius", 20)}),
-        ("Blight", 4, "nec", "vocal,somatic", (30, "ft"),
-         "One creature makes a Constitution saving throw, taking 8d8 necrotic damage on a failure or half as "
-         "much on a success.",
-         {"kind": "save", "save": "con", "damage": [(8, 8, "necrotic")], "on_save": "half"}),
+         "He uses this to hold ground rather than to hurt anyone, and will cast it across a doorway the "
+         "party is standing in rather than across the party."),
         ("Astral Shear", 5, "abj", "vocal,somatic", (90, "ft"),
-         "Cuts a creature's connection to its home reality: 8d8 force damage on a failed Charisma save, and "
-         "an extraplanar target cannot teleport, summon, open portals or benefit from planar resistances "
-         "until the end of his next turn. *Void Arcana.*",
-         {"kind": "save", "save": "cha", "damage": [(8, 8, "force")], "on_save": "none"}),
+         "Written for use against demons, and used in four thousand years exactly twice."),
         ("Archive of the Living Moment", 5, "div", "vocal,somatic,concentration,ritual", (0, "self"),
-         "Recreates any continuous 10-minute period from the last 24 hours in a 60-foot radius as translucent "
-         "sensory echoes. *Lunar Arcana.* This is how he knows what the party did upstairs.",
-         {"kind": "utility", "template": ("radius", 60)}),
-        ("Circle of Death", 6, "nec", "vocal,somatic,material", (150, "ft"),
-         "A 60-foot-radius sphere of negative energy. Each creature makes a Constitution saving throw, taking "
-         "8d6 necrotic damage on a failure or half as much on a success.",
-         {"kind": "save", "save": "con", "damage": [(8, 6, "necrotic")], "on_save": "half", "template": ("radius", 60)}),
+         "This is how he already knows what the party did upstairs. He casts it every morning in the "
+         "Procession and watches the previous day from the doorway."),
         ("Black Meridian", 6, "trs", "vocal,somatic", (120, "ft"),
-         "Space compresses along a 120-foot line: 8d8 force damage on a failed Dexterity save and the target "
-         "is dragged to the midpoint. *Void Arcana.*",
-         {"kind": "save", "save": "dex", "damage": [(8, 8, "force")], "on_save": "half", "template": ("line", 120)}),
+         "The only spell on his list he describes as a weapon. He apologises before using it, to the room."),
         ("Gravity Crown", 7, "trs", "vocal,somatic,concentration", (60, "ft"),
-         "Redefines which direction is down for up to six creatures, independently, every turn. "
-         "*Void Arcana.*",
-         {"kind": "utility", "targets": "6"}),
-        ("Finger of Death", 7, "nec", "vocal,somatic", (60, "ft"),
-         "One creature makes a Constitution saving throw, taking 7d8 + 30 necrotic damage on a failure or "
-         "half as much on a success. A humanoid killed by this spell rises as a zombie under the caster's "
-         "control - **and Kathandar always declines that clause**, which costs him nothing and is the most "
-         "important thing on this sheet.",
-         {"kind": "save", "save": "con", "damage": [(7, 8, "necrotic")], "formula": "30", "on_save": "half"}),
+         "A Veylari field-officer's working for moving a unit across broken ground. He has not needed it "
+         "for that purpose since year 0."),
         ("Ninefold Bastion", 8, "abj", "vocal,somatic", (0, "self"),
-         "Nine rotating geometric seals establish a 60-foot radius in which teleportation, planar travel, "
-         "summoning and possession all fail. *Void Arcana.* The direct ancestor of the Ninefold Prohibition, "
-         "and he helped write it.",
-         {"kind": "utility", "template": ("radius", 60)}),
+         "He helped write the working this spell is the ancestor of. Asked whether the Ninefold Prohibition "
+         "is simply this spell made permanent, he says yes - and then corrects himself: *\"No. This one "
+         "ends.\"*"),
         ("Soul Orbit", 8, "nec", "vocal,somatic", (60, "ft"),
-         "Tethers up to six willing souls. If one dies during the hour, its soul orbits him as a star-like "
-         "mote and can be returned to its body within 1 minute. *Void Arcana.*",
-         {"kind": "utility", "targets": "6"}),
+         "He will cast this on the party without being asked, before a fight he expects them to lose, and "
+         "he will not mention that he has done it."),
         ("Reality Exclusion", 9, "abj", "vocal,somatic,concentration", (0, "self"),
-         "Names one plane and tells it, for 60 feet and one minute, that it does not belong here. "
-         "*Void Arcana.* He is one of perhaps four beings alive who has cast this at scale.",
-         {"kind": "save", "save": "cha", "damage": [(6, 10, "force")], "on_save": "none", "template": ("radius", 60)}),
+         "Fewer than five beings alive have cast this at full scale. Kathandar is one of them, he has done "
+         "it once, and the plane he named is not one he will discuss."),
         ("Choose the Better World", 9, "trs", "vocal", (0, "special"),
-         "Reality returns to the state it held at the beginning of the previous round. Only the caster "
-         "remembers the discarded timeline. *Lunar Arcana.*\n\nHe has one slot. He has had one slot for four "
-         "thousand years. He is saving it, and he will not say what for.",
-         {"kind": "utility", "activation": "reaction"}),
+         "**He has one 9th-level slot, and he has had one 9th-level slot for four thousand years.** He is "
+         "saving it. He will not say what for, and *Insight DC 20* establishes only that he has already "
+         "decided."),
+
+        # Necromancy he taught himself, long after the Watch required it.
+        ("Grave Whisper", 0, "nec", "vocal,somatic", (60, "ft"),
+         "You speak a word to something that has stopped listening. Make a ranged spell attack against one "
+         "creature within range. On a hit the target takes 1d10 necrotic damage.\n\nIf the target is below "
+         "half its hit point maximum it also hears, clearly, the name of the last creature it watched die. "
+         "This has no mechanical effect and is not an illusion.\n\nThe damage increases to 2d10 at 5th "
+         "level, 3d10 at 11th and 4d10 at 17th.\n\n*Composed by Kathandar in the second century of the "
+         "Watch. He has never taught it to anyone.*",
+         {"kind": "attack", "attack_type": "ranged", "ability": "int", "damage": [(1, 10, "necrotic")]}),
+        ("Animate Dead", 3, "nec", "vocal,somatic,material", (10, "ft"),
+         "*Material component: a drop of blood, a piece of flesh, and a pinch of bone dust.*\n\nChoose a "
+         "pile of bones or a corpse of a Medium or Small humanoid within range. Your spell imbues the target "
+         "with a foul mimicry of life, raising it as an undead creature: a skeleton if you chose bones, or a "
+         "zombie if you chose a corpse.\n\nOn each of your turns you can use a bonus action to mentally "
+         "command any creature you made with this spell if it is within 60 feet of you. You decide what "
+         "action the creature takes and where it moves, or you can issue a general command. The creature "
+         "obeys for 24 hours, after which it must be commanded again or it ceases to follow you.\n\n**At "
+         "Higher Levels.** Each slot level above 3rd animates or reasserts control over two additional "
+         "undead.\n\n**Kathandar has this prepared and has never cast it.** Not once, in four thousand "
+         "years, in a building containing the largest catalogue of the dead in existence. The party may ask "
+         "him why, and he will answer.",
+         None),
+        ("Blight", 4, "nec", "vocal,somatic", (30, "ft"),
+         "Necromantic energy washes over a creature you can see within range, draining moisture and "
+         "vitality from it. The target makes a Constitution saving throw, taking 8d8 necrotic damage on a "
+         "failed save or half as much on a successful one. This spell has no effect on undead or "
+         "constructs.\n\nA plant creature makes the save with disadvantage and takes maximum damage on a "
+         "failure. A nonmagical plant that is not a creature gets no save and simply withers.\n\n**At "
+         "Higher Levels.** The damage increases by 1d8 per slot level above 4th.",
+         {"kind": "save", "save": "con", "damage": [(8, 8, "necrotic")], "on_save": "half"}),
+        ("Circle of Death", 6, "nec", "vocal,somatic,material", (150, "ft"),
+         "*Material component: the powder of a crushed black pearl worth at least 500 gp.*\n\nA sphere of "
+         "negative energy ripples out in a 60-foot radius from a point you choose within range. Each "
+         "creature in that area makes a Constitution saving throw, taking 8d6 necrotic damage on a failed "
+         "save or half as much on a successful one.\n\n**At Higher Levels.** The damage increases by 2d6 "
+         "per slot level above 6th.",
+         {"kind": "save", "save": "con", "damage": [(8, 6, "necrotic")], "on_save": "half",
+          "template": ("radius", 60)}),
+        ("Finger of Death", 7, "nec", "vocal,somatic", (60, "ft"),
+         "You send negative energy coursing through a creature you can see within range. The target makes a "
+         "Constitution saving throw, taking 7d8 + 30 necrotic damage on a failed save or half as much on a "
+         "successful one.\n\nA humanoid killed by this spell rises at the start of your next turn as a "
+         "zombie permanently under the caster's command.\n\n**Kathandar always declines that clause.** It "
+         "costs him nothing, it is the single most important line on this sheet, and a party that notices "
+         "should be told they noticed.",
+         {"kind": "save", "save": "con", "damage": [(7, 8, "necrotic")], "formula": "30", "on_save": "half"}),
     ],
 )
 
@@ -3145,23 +3157,21 @@ BOSSES += [
         ],
         spells=[
             ("Planar Mooring", 3, "abj", "vocal,somatic,concentration", (60, "ft"),
-             "A 20-foot-radius zone in which teleportation fails and portals cannot be created. "
-             "*Void Arcana.*",
-             {"kind": "utility", "template": ("radius", 20)}),
+             "Korveth pins the room before he answers a question, so that nobody can leave in the middle of "
+             "it."),
             ("Event Horizon Cage", 4, "trs", "vocal,somatic,concentration", (90, "ft"),
-             "A 20-foot gravitational distortion: pulled 10 feet toward the centre on a failed Strength "
-             "save, and moving away costs double. *Void Arcana.*",
-             {"kind": "save", "save": "str", "on_save": "none", "template": ("radius", 20)}),
+             "He has never used this offensively. He uses it to stop people walking off the edge of things "
+             "he cannot see and they can."),
             ("Worldline Tunnel", 5, "con", "vocal,somatic", (0, "special"),
-             "Opens a corridor to any location within 10 miles that he has personally visited. He has "
-             "personally visited everywhere. *Void Arcana.*", None),
+             "The spell requires a location the caster has personally visited. **Korveth has personally "
+             "visited everywhere**, and he is the only guardian in the campaign who routinely leaves his own "
+             "pyramid."),
             ("Black Meridian", 6, "trs", "vocal,somatic", (120, "ft"),
-             "Space compresses along a 120-foot line: 8d8 force and dragged to the midpoint. *Void Arcana.*",
-             {"kind": "save", "save": "dex", "damage": [(8, 8, "force")], "on_save": "half",
-              "template": ("line", 120)}),
+             "A survey instrument before it was ever a weapon. The original Veylari use was to measure a "
+             "distance by collapsing it and counting what was left over."),
             ("Gravity Crown", 7, "trs", "vocal,somatic,concentration", (60, "ft"),
-             "Redefines down for up to six creatures independently, every turn. *Void Arcana.*",
-             {"kind": "utility", "targets": "6"}),
+             "Korveth wrote the field manual for this spell. Its first line is a warning about using it on "
+             "people who have not consented."),
         ],
     ),
     dict(
@@ -3230,16 +3240,15 @@ BOSSES += [
         ],
         spells=[
             ("Heart of Noon", 4, "abj", "vocal,somatic,concentration", (0, "self"),
-             "A 20-foot aura in which allies cannot be frightened and gain temporary hit points each turn. "
-             "*Solar Arcana; she was taught it by a colleague and has never been good at it.*", None),
+             "A Solar working, taught to Nymara by a colleague in the second year of the invasion. She has "
+             "never been good at it, says so, and casts it anyway because the aura keeps frightened people "
+             "calm."),
             ("Sunfall Crucible", 5, "evo", "vocal,somatic,concentration", (120, "ft"),
-             "A 20-foot field. Enemies take an extra 1d8 radiant the first time they are damaged each turn; "
-             "when a hostile creature dies inside, one creature in the field regains 2d8 hit points.",
-             {"kind": "utility", "template": ("radius", 20)}),
+             "She uses the field as a dressing station rather than a killing ground, and stands inside it so "
+             "that the healing lands where she needs it."),
             ("First Pattern Restoration", 5, "trs", "vocal,somatic", (0, "touch"),
-             "Restores 6d8 + 5 hit points and ends one condition or bodily curse. She uses this on the party "
-             "if the fight goes badly for them, which the party will find unbearable.",
-             {"kind": "heal", "healing": (6, 8, "healing"), "formula": "5"}),
+             "**Nymara will cast this on the party if the fight is going badly for them** - in the middle of "
+             "the fight she is having with them. The party will find that unbearable, which is the point."),
         ],
     ),
     dict(
@@ -3356,17 +3365,15 @@ BOSSES += [
         ],
         spells=[
             ("Archive of the Living Moment", 5, "div", "vocal,somatic,concentration,ritual", (0, "self"),
-             "Recreates any 10-minute period from the last 24 hours in a 60-foot radius as translucent "
-             "echoes. *Lunar Arcana.* He does not need this and uses it to check his own record.",
-             {"kind": "utility", "template": ("radius", 60)}),
+             "Irio does not need this spell to know what happened; he wrote it down. He casts it daily to "
+             "check his own record against the event, and in four thousand years he has found three errors "
+             "and corrected all three."),
             ("Astral Shear", 5, "abj", "vocal,somatic", (90, "ft"),
-             "Cuts a creature's connection to its home reality: 8d8 force on a failed Charisma save, and an "
-             "extraplanar target cannot teleport or summon. *Void Arcana.*",
-             {"kind": "save", "save": "cha", "damage": [(8, 8, "force")], "on_save": "none"}),
+             "The only genuinely aggressive working on his list. He regards using it as a failure of the "
+             "conversation, and will say so afterwards, precisely."),
             ("Ninefold Bastion", 8, "abj", "vocal,somatic", (0, "self"),
-             "Nine rotating seals: no teleportation, planar travel, summoning or possession across a 60-foot "
-             "radius for an hour. *Void Arcana.*",
-             {"kind": "utility", "template": ("radius", 60)}),
+             "He seals the scriptorium with this every night - not against intruders, but so that nothing in "
+             "the Unaltered Record can be reached from another plane while he is not reading it."),
         ],
     ),
     dict(
