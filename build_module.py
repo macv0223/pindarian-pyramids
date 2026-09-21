@@ -23,7 +23,7 @@ TEMPLATE_PACK = ROOT / "pack-template"
 OUTPUT = ROOT.parent / "build/pindarian-pyramids"
 
 REPOSITORY = "https://github.com/macv0223/pindarian-pyramids"
-VERSION = "2.5.1"
+VERSION = "2.5.2"
 MODULE_ID = "pindarian-pyramids"
 
 SOURCES = {
@@ -468,7 +468,11 @@ def stats() -> dict:
         "coreVersion": "14.365",
         "createdTime": 1789330560000,
         "modifiedTime": 1789330560000,
-        "lastModifiedBy": "pindarianpyramids",
+        # Must be a 16-character document ID or null. A package has no user
+        # to attribute, so null is the correct value.
+        "lastModifiedBy": None,
+        "compendiumSource": None,
+        "duplicateSource": None,
     }
 
 
@@ -2054,6 +2058,14 @@ where separately licensed by the applicable rights holder.
     write_text(OUTPUT / "LICENSE.md", license_text)
 
     changelog = """# Changelog
+
+## 2.5.2
+
+- **Fixes a crash on world load.** Every document's `_stats.lastModifiedBy` was set to a
+  17-character string; Foundry requires a 16-character ID or null. Folders validate strictly when
+  a compendium initialises, so the new spell folders crashed the game. The field is now null on all
+  336 affected documents.
+- The validator now checks every document ID and ID-typed reference across all seven packs.
 
 ## 2.5.1
 

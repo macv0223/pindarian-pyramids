@@ -103,7 +103,7 @@ def module_asset(path: str) -> Path:
 def main() -> None:
     manifest = json.loads((MODULE / "module.json").read_text(encoding="utf-8"))
     assert manifest["id"] == "pindarian-pyramids"
-    assert manifest["version"] == "2.5.0"
+    assert manifest["version"] == "2.5.2"
     assert manifest["compatibility"] == {"minimum": "14", "verified": "14", "maximum": "14"}
     system_compatibility = manifest["relationships"]["systems"][0]["compatibility"]
     assert system_compatibility == {"minimum": "5.3.3", "verified": "5.3.3"}
@@ -200,6 +200,25 @@ def main() -> None:
     maps = list((MODULE / "assets/maps").glob("*.jpg"))
     assert len(generated) == 286
     assert len(maps) >= 2
+
+
+    # Every document ID, and every ID-typed reference Foundry validates strictly,
+    # must be 16 alphanumeric characters (or null where nullable). A single bad
+    # value in a Folder crashes world load outright.
+    id_pattern = re.compile(r"^[A-Za-z0-9]{16}$")
+    bad_ids = []
+    for pack_name in ("lore", "relics", "guardians", "bestiary", "legions", "spells", "scenes"):
+        for key, doc in decode_pack(pack_name):
+            if not id_pattern.match(doc.get("_id", "")):
+                bad_ids.append(f"{pack_name} {key}: _id {doc.get('_id')!r}")
+            modified_by = (doc.get("_stats") or {}).get("lastModifiedBy")
+            if modified_by is not None and not id_pattern.match(modified_by):
+                bad_ids.append(f"{pack_name} {key}: lastModifiedBy {modified_by!r}")
+            for field in ("folder", "journal", "journalEntryPage", "initialLevel"):
+                value = doc.get(field)
+                if value is not None and not id_pattern.match(value):
+                    bad_ids.append(f"{pack_name} {key}: {field} {value!r}")
+    assert not bad_ids, "invalid document IDs:\n  " + "\n  ".join(bad_ids[:10])
 
     print("Pindarian Pyramids validation passed")
     print(f"  Journals: {len(journal_parents)} ({len(journal_pages)} populated pages)")
