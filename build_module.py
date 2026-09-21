@@ -23,7 +23,7 @@ TEMPLATE_PACK = ROOT / "pack-template"
 OUTPUT = ROOT.parent / "build/pindarian-pyramids"
 
 REPOSITORY = "https://github.com/macv0223/pindarian-pyramids"
-VERSION = "2.5.0"
+VERSION = "2.5.1"
 MODULE_ID = "pindarian-pyramids"
 
 SOURCES = {
@@ -1534,7 +1534,38 @@ def casting_time(body: str, declared: str) -> tuple[str, int | None]:
     return declared, None
 
 
-def spell_item_record(tradition: str, people: str, spell: tuple, sort: int) -> tuple[bytes, bytes]:
+
+# The Arcana compendium is filed by affinity, then by level. Folder names carry
+# roman numerals so they sort Sun, Moon, Void whether Foundry is sorting the pack
+# alphabetically or manually; inside each folder the spells are sorted manually,
+# cantrips first, 9th level last.
+SPELL_FOLDERS = {
+    "Solar Arcana": ("I. Sun - Solar Arcana", "Magic of the Children of the Sun: energy, creation, protection.", "#b8862b"),
+    "Lunar Arcana": ("II. Moon - Lunar Arcana", "Magic of the Children of the Moon: time, memory, change.", "#6f7fa8"),
+    "Void Arcana": ("III. Void - Void Arcana", "Magic of the Children of the Void: distance, gravity, the planes.", "#4a3a62"),
+}
+
+
+def folder_record(name: str, description: str, color: str, sort: int, doc_type: str = "Item") -> tuple[str, tuple[bytes, bytes]]:
+    folder_id = foundry_id(f"folder:{doc_type}:{name}")
+    folder = {
+        "_id": folder_id,
+        "name": name,
+        "type": doc_type,
+        "description": description,
+        "folder": None,
+        "sorting": "m",
+        "sort": sort,
+        "color": color,
+        "flags": {},
+        "_stats": stats(),
+    }
+    return folder_id, (f"!folders!{folder_id}".encode(), json.dumps(folder, separators=(",", ":")).encode())
+
+
+def spell_item_record(
+    tradition: str, people: str, spell: tuple, sort: int, folder: str | None = None
+) -> tuple[bytes, bytes]:
     name, level, school, components, duration, spell_range, body, spec = spell
     spell_id = foundry_id(f"spell:{name}")
     properties = [part for part in components.split(",") if part]
@@ -1565,7 +1596,7 @@ def spell_item_record(tradition: str, people: str, spell: tuple, sort: int) -> t
         "name": name,
         "type": "spell",
         "img": spell_art(name),
-        "folder": None,
+        "folder": folder,
         "sort": sort,
         "ownership": {"default": 0},
         "flags": {"pindarian-pyramids": {"tradition": tradition}},
@@ -2024,6 +2055,11 @@ where separately licensed by the applicable rights holder.
 
     changelog = """# Changelog
 
+## 2.5.1
+
+- The Pindarian Arcana compendium is filed into three folders - **I. Sun**, **II. Moon** and
+  **III. Void** - each sorted manually from cantrips to 9th level.
+
 ## 2.5.0
 
 - **Fixes map placement.** The Level's texture anchor was 0 rather than 0.5, which pins the image's
@@ -2387,9 +2423,16 @@ jobs:
     write_pack(OUTPUT / "packs/bestiary", bestiary_records)
 
     spell_records: list[tuple[bytes, bytes]] = []
-    for tradition, people, spells in SPELL_TRADITIONS:
-        for index, spell in enumerate(spells):
-            spell_records.append(spell_item_record(tradition, people, spell, index * 1000))
+    for folder_sort, (tradition, people, spells) in enumerate(SPELL_TRADITIONS, 1):
+        folder_name, description, color = SPELL_FOLDERS[tradition]
+        folder_id, folder_row = folder_record(folder_name, description, color, folder_sort * 100000)
+        spell_records.append(folder_row)
+        # Level first, then the order the spells are written in.
+        ordered = sorted(enumerate(spells), key=lambda pair: (pair[1][1], pair[0]))
+        for position, (_index, spell) in enumerate(ordered, 1):
+            spell_records.append(
+                spell_item_record(tradition, people, spell, position * 1000, folder=folder_id)
+            )
     write_pack(OUTPUT / "packs/spells", spell_records)
 
 def report_art() -> None:
